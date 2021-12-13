@@ -1,7 +1,7 @@
 const int SUBARU_MAX_STEER = 2047; // 1s
 const int SUBARU_MAX_STEER_2020 = 1439; // lower limit for Impreza/Crosstrek 2020+
 const int SUBARU_MAX_STEER_3071 = 3071; // Higher limit for some Impreza/Crosstrek
-const int SUBARU_MAX_RT_DELTA_3071 = 420;
+const int SUBARU_MAX_RT_DELTA_3071 = 491;
 const int SUBARU_MAX_RATE_UP_3071 = 50;
 const int SUBARU_MAX_RATE_DOWN_3071 = 70;
 // real time torque limit to prevent controls spamming
