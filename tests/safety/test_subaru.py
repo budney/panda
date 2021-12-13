@@ -6,11 +6,7 @@ from panda.tests.safety import libpandasafety_py
 import panda.tests.safety.common as common
 from panda.tests.safety.common import CANPackerPanda
 
-MAX_RATE_UP = 50
-MAX_RATE_DOWN = 70
-
-MAX_RT_DELTA = 940
-RT_INTERVAL = 250000
+RT_INTERVAL = 100000
 
 DRIVER_TORQUE_ALLOWANCE = 60
 DRIVER_TORQUE_FACTOR = 10
@@ -31,6 +27,10 @@ class TestSubaruSafety(common.PandaSafetyTest):
   FWD_BUS_LOOKUP = {0: 2, 2: 0}
 
   MAX_STEER = 2047
+  MAX_RATE_UP = 30
+  MAX_RATE_DOWN = 30
+
+  MAX_RT_DELTA = 300
 
   def setUp(self):
     self.packer = CANPackerPanda("subaru_global_2017_generated")
@@ -91,15 +91,15 @@ class TestSubaruSafety(common.PandaSafetyTest):
     self.safety.set_controls_allowed(True)
 
     self._set_prev_torque(0)
-    self.assertTrue(self._tx(self._torque_msg(MAX_RATE_UP)))
+    self.assertTrue(self._tx(self._torque_msg(self.MAX_RATE_UP)))
     self._set_prev_torque(0)
-    self.assertTrue(self._tx(self._torque_msg(-MAX_RATE_UP)))
+    self.assertTrue(self._tx(self._torque_msg(-self.MAX_RATE_UP)))
 
     self._set_prev_torque(0)
-    self.assertFalse(self._tx(self._torque_msg(MAX_RATE_UP + 1)))
+    self.assertFalse(self._tx(self._torque_msg(self.MAX_RATE_UP + 1)))
     self.safety.set_controls_allowed(True)
     self._set_prev_torque(0)
-    self.assertFalse(self._tx(self._torque_msg(-MAX_RATE_UP - 1)))
+    self.assertFalse(self._tx(self._torque_msg(-self.MAX_RATE_UP - 1)))
 
   def test_non_realtime_limit_down(self):
     self._set_torque_driver(0, 0)
@@ -135,13 +135,13 @@ class TestSubaruSafety(common.PandaSafetyTest):
 
       self._set_prev_torque(self.MAX_STEER * sign)
       self._set_torque_driver(-max_driver_torque * sign, -max_driver_torque * sign)
-      self.assertTrue(self._tx(self._torque_msg((self.MAX_STEER - MAX_RATE_DOWN) * sign)))
+      self.assertTrue(self._tx(self._torque_msg((self.MAX_STEER - self.MAX_RATE_DOWN) * sign)))
       self._set_prev_torque(self.MAX_STEER * sign)
       self._set_torque_driver(-max_driver_torque * sign, -max_driver_torque * sign)
       self.assertTrue(self._tx(self._torque_msg(0)))
       self._set_prev_torque(self.MAX_STEER * sign)
       self._set_torque_driver(-max_driver_torque * sign, -max_driver_torque * sign)
-      self.assertFalse(self._tx(self._torque_msg((self.MAX_STEER - MAX_RATE_DOWN + 1) * sign)))
+      self.assertFalse(self._tx(self._torque_msg((self.MAX_STEER - self.MAX_RATE_DOWN + 1) * sign)))
 
   def test_realtime_limits(self):
     self.safety.set_controls_allowed(True)
@@ -150,20 +150,93 @@ class TestSubaruSafety(common.PandaSafetyTest):
       self.safety.init_tests()
       self._set_prev_torque(0)
       self._set_torque_driver(0, 0)
-      for t in np.arange(0, MAX_RT_DELTA, 1):
+      for t in np.arange(0, self.MAX_RT_DELTA, 1):
         t *= sign
         self.assertTrue(self._tx(self._torque_msg(t)))
-      self.assertFalse(self._tx(self._torque_msg(sign * (MAX_RT_DELTA + 1))))
+      self.assertFalse(self._tx(self._torque_msg(sign * (self.MAX_RT_DELTA + 1))))
 
       self._set_prev_torque(0)
-      for t in np.arange(0, MAX_RT_DELTA, 1):
+      for t in np.arange(0, self.MAX_RT_DELTA, 1):
         t *= sign
         self.assertTrue(self._tx(self._torque_msg(t)))
 
       # Increase timer to update rt_torque_last
       self.safety.set_timer(RT_INTERVAL + 1)
-      self.assertTrue(self._tx(self._torque_msg(sign * (MAX_RT_DELTA - 1))))
-      self.assertTrue(self._tx(self._torque_msg(sign * (MAX_RT_DELTA + 1))))
+      self.assertTrue(self._tx(self._torque_msg(sign * (self.MAX_RT_DELTA - 1))))
+      self.assertTrue(self._tx(self._torque_msg(sign * (self.MAX_RT_DELTA + 1))))
+
+class TestSubaru2020Safety(TestSubaruSafety):
+  MAX_STEER = 1439
+
+  def setUp(self):
+    self.packer = CANPackerPanda("subaru_global_2017_generated")
+    self.safety = libpandasafety_py.libpandasafety
+    self.safety.set_safety_hooks(Panda.SAFETY_SUBARU, 1)
+    self.safety.init_tests()
+
+class TestSubaru3071Safety(TestSubaruSafety):
+  MAX_STEER = 3071
+  MAX_RATE_UP = 50
+  MAX_RATE_DOWN = 70
+
+  MAX_RT_DELTA = 420
+
+  def setUp(self):
+    self.packer = CANPackerPanda("subaru_global_2017_generated")
+    self.safety = libpandasafety_py.libpandasafety
+    self.safety.set_safety_hooks(Panda.SAFETY_SUBARU, 2)
+    self.safety.init_tests()
+
+class TestSubaruGen2Safety(TestSubaruSafety):
+  TX_MSGS = [[0x122, 0], [0x321, 0], [0x322, 0], [0x40, 2], [0x139, 2]]
+  FWD_BLACKLISTED_ADDRS = {0: [0x40, 0x139], 2: [0x122, 0x321, 0x322]}
+
+  def setUp(self):
+    self.packer = CANPackerPanda("subaru_global_2017_generated")
+    self.safety = libpandasafety_py.libpandasafety
+    self.safety.set_safety_hooks(Panda.SAFETY_SUBARU_GEN2, 0)
+    self.safety.init_tests()
+
+  def _speed_msg(self, speed):
+    # subaru safety doesn't use the scaled value, so undo the scaling
+    values = {s: speed * 0.057 for s in ["FR", "FL", "RR", "RL"]}
+    values["Counter"] = self.cnt_speed % 4
+    self.__class__.cnt_speed += 1
+    return self.packer.make_can_msg_panda("Wheel_Speeds", 1, values)
+
+  def _brake_msg(self, brake):
+    values = {"Brake": brake, "Counter": self.cnt_brake % 4}
+    self.__class__.cnt_brake += 1
+    return self.packer.make_can_msg_panda("Brake_Status", 1, values)
+
+  def _pcm_status_msg(self, enable):
+    values = {"Cruise_Activated": enable, "Counter": self.cnt_cruise % 4}
+    self.__class__.cnt_cruise += 1
+    return self.packer.make_can_msg_panda("CruiseControl", 1, values)
+
+class TestSubaruHybridSafety(TestSubaruSafety):
+  TX_MSGS = [[0x122, 0], [0x321, 0], [0x322, 0], [0x40, 2], [0x139, 2]]
+  FWD_BLACKLISTED_ADDRS = {0: [0x40, 0x139], 2: [0x122, 0x321, 0x322]}
+
+  def setUp(self):
+    self.packer = CANPackerPanda("subaru_global_2020_hybrid_generated")
+    self.safety = libpandasafety_py.libpandasafety
+    self.safety.set_safety_hooks(Panda.SAFETY_SUBARU_HYBRID, 0)
+    self.safety.init_tests()
+
+  def _brake_msg(self, brake):
+    values = {"Brake": brake}
+    return self.packer.make_can_msg_panda("Brake_Hybrid", 1, values)
+
+  def _gas_msg(self, gas):
+    values = {"Throttle_Pedal": gas, "Counter": self.cnt_gas % 4}
+    self.__class__.cnt_gas += 1
+    return self.packer.make_can_msg_panda("Throttle_Hybrid", 1, values)
+
+  def _pcm_status_msg(self, enable):
+    values = {"Cruise_Activated": enable, "Counter": self.cnt_cruise % 4}
+    self.__class__.cnt_cruise += 1
+    return self.packer.make_can_msg_panda("ES_DashStatus", 2, values)
 
 class TestSubaru2020Safety(TestSubaruSafety):
   MAX_STEER = 1439
