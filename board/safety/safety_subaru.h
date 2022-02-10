@@ -1,10 +1,10 @@
 const SteeringLimits SUBARU_STEERING_LIMITS = {
-  .max_steer = 2047,
+  .max_steer = 3071,
   .max_rt_delta = 940,
   .max_rt_interval = 250000,
   .max_rate_up = 50,
   .max_rate_down = 70,
-  .driver_torque_factor = 50,
+  .driver_torque_factor = 10,
   .driver_torque_allowance = 60,
   .type = TorqueDriverLimited,
 };
