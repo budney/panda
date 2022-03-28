@@ -5,7 +5,7 @@ import numpy as np
 from panda import Panda
 from panda.tests.safety import libpandasafety_py
 import panda.tests.safety.common as common
-from panda.tests.safety.common import CANPackerPanda, UNSAFE_MODE
+from panda.tests.safety.common import CANPackerPanda, ALTERNATIVE_EXPERIENCE
 
 MAX_RATE_UP = 7
 MAX_RATE_DOWN = 17
@@ -19,6 +19,12 @@ RT_INTERVAL = 250000
 
 DRIVER_TORQUE_ALLOWANCE = 50
 DRIVER_TORQUE_FACTOR = 4
+
+class Buttons:
+  UNPRESS = 1
+  RES_ACCEL = 2
+  DECEL_SET = 3
+  CANCEL = 6
 
 class TestGmSafety(common.PandaSafetyTest):
   TX_MSGS = [[384, 0], [1033, 0], [1034, 0], [715, 0], [880, 0],  # pt bus
@@ -87,22 +93,24 @@ class TestGmSafety(common.PandaSafetyTest):
     values = {"LKASteeringCmd": torque}
     return self.packer.make_can_msg_panda("ASCMLKASteeringCmd", 0, values)
 
-  def test_resume_button(self):
-    RESUME_BTN = 2
-    self.safety.set_controls_allowed(0)
-    self._rx(self._button_msg(RESUME_BTN))
-    self.assertTrue(self.safety.get_controls_allowed())
+  def test_set_resume_buttons(self):
+    """
+      SET and RESUME enter controls allowed on their falling edge.
+    """
+    for btn in range(8):
+      self.safety.set_controls_allowed(0)
+      for _ in range(10):
+        self._rx(self._button_msg(btn))
+        self.assertFalse(self.safety.get_controls_allowed())
 
-  def test_set_button(self):
-    SET_BTN = 3
-    self.safety.set_controls_allowed(0)
-    self._rx(self._button_msg(SET_BTN))
-    self.assertTrue(self.safety.get_controls_allowed())
+      # should enter controls allowed on falling edge
+      if btn in (Buttons.RES_ACCEL, Buttons.DECEL_SET):
+        self._rx(self._button_msg(Buttons.UNPRESS))
+        self.assertTrue(self.safety.get_controls_allowed())
 
   def test_cancel_button(self):
-    CANCEL_BTN = 6
     self.safety.set_controls_allowed(1)
-    self._rx(self._button_msg(CANCEL_BTN))
+    self._rx(self._button_msg(Buttons.CANCEL))
     self.assertFalse(self.safety.get_controls_allowed())
 
   def test_brake_safety_check(self):
@@ -234,9 +242,9 @@ class TestGmSafety(common.PandaSafetyTest):
       elif pedal == 'gas':
         self._rx(self._gas_msg(0))
 
-  def test_tx_hook_on_pedal_pressed_on_unsafe_gas_mode(self):
+  def test_tx_hook_on_pedal_pressed_on_alternative_gas_experience(self):
     for pedal in ['brake', 'gas']:
-      self.safety.set_unsafe_mode(UNSAFE_MODE.DISABLE_DISENGAGE_ON_GAS)
+      self.safety.set_alternative_experience(ALTERNATIVE_EXPERIENCE.DISABLE_DISENGAGE_ON_GAS)
       if pedal == 'brake':
         # brake_pressed_prev and vehicle_moving
         self._rx(self._speed_msg(100))
@@ -254,7 +262,7 @@ class TestGmSafety(common.PandaSafetyTest):
 
       # reset status
       self.safety.set_controls_allowed(0)
-      self.safety.set_unsafe_mode(UNSAFE_MODE.DEFAULT)
+      self.safety.set_alternative_experience(ALTERNATIVE_EXPERIENCE.DEFAULT)
       self._tx(self._send_brake_msg(0))
       self._tx(self._torque_msg(0))
       if pedal == 'brake':
