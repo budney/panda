@@ -575,8 +575,6 @@ static int subaru_hybrid_rx_hook(CANPacket_t *to_push) {
 
 static const addr_checks* subaru_init(uint16_t param) {
   UNUSED(param);
-  controls_allowed = false;
-  relay_malfunction_reset();
   return &subaru_rx_checks;
 }
 
