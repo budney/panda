@@ -420,7 +420,8 @@ static int subaru_gen2_rx_hook(CANPacket_t *to_push) {
   return valid;
 }
 
-static int subaru_gen2_tx_hook(CANPacket_t *to_send) {
+static int subaru_gen2_tx_hook(CANPacket_t *to_send, bool longitudinal_allowed) {
+  UNUSED(longitudinal_allowed);
   int tx = 1;
   int addr = GET_ADDR(to_send);
 
@@ -578,14 +579,14 @@ static const addr_checks* subaru_init(uint16_t param) {
   return &subaru_rx_checks;
 }
 
-static const addr_checks* subaru_gen2_init(int32_t param) {
+static const addr_checks* subaru_gen2_init(uint16_t param) {
   UNUSED(param);
   controls_allowed = false;
   relay_malfunction_reset();
   return &subaru_gen2_rx_checks;
 }
 
-static const addr_checks* subaru_hybrid_init(int32_t param) {
+static const addr_checks* subaru_hybrid_init(uint16_t param) {
   UNUSED(param);
   controls_allowed = false;
   relay_malfunction_reset();
