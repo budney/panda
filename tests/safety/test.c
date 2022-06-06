@@ -1,15 +1,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #include "panda.h"
 #include "can_definitions.h"
-#include "utils.h"
 
-#define CANFD
-
-typedef struct {
+typedef struct
+{
   uint32_t CNT;
 } TIM_TypeDef;
 
@@ -75,7 +72,6 @@ void safety_tick_current_rx_checks() {
 
 bool addr_checks_valid() {
   if (current_rx_checks->len <= 0) {
-    printf("missing RX checks\n");
     return false;
   }
 
@@ -83,7 +79,6 @@ bool addr_checks_valid() {
     const AddrCheckStruct addr = current_rx_checks->check[i];
     bool valid = addr.msg_seen && !addr.lagging && addr.valid_checksum && (addr.wrong_counters < MAX_WRONG_COUNTERS);
     if (!valid) {
-      //printf("seen %d lagging %d valid checksum %d wrong counters %d\n", addr.msg_seen, addr.lagging, addr.valid_checksum, addr.wrong_counters);
       return false;
     }
   }
@@ -94,8 +89,8 @@ void set_controls_allowed(bool c){
   controls_allowed = c;
 }
 
-void set_alternative_experience(int mode){
-  alternative_experience = mode;
+void set_unsafe_mode(int mode){
+  unsafe_mode = mode;
 }
 
 void set_relay_malfunction(bool c){
@@ -110,8 +105,8 @@ bool get_controls_allowed(void){
   return controls_allowed;
 }
 
-int get_alternative_experience(void){
-  return alternative_experience;
+int get_unsafe_mode(void){
+  return unsafe_mode;
 }
 
 bool get_relay_malfunction(void){
@@ -217,7 +212,7 @@ void init_tests(void){
     hw_type = atoi(getenv("HW_TYPE"));
   }
   safety_mode_cnt = 2U;  // avoid ignoring relay_malfunction logic
-  alternative_experience = 0;
+  unsafe_mode = 0;
   set_timer(0);
 }
 

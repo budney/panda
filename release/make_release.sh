@@ -1,10 +1,6 @@
 #!/bin/bash
-set -e
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
-export CERT=$DIR/../../xx/pandaextra/certs/release
-
-if [ ! -f "$CERT" ]; then
+if [ ! -d "../../xx/pandaextra" ]; then
   echo "No release cert found, cannot build release."
   echo "You probably aren't looking to do this anyway."
   exit
@@ -12,8 +8,9 @@ fi
 
 export RELEASE=1
 export BUILDER=DEV
+export CERT=~/xx/pandaextra/certs/release
 
-cd $DIR/../board
+cd ../board
 scons -u -c
 rm obj/*
 scons -u
