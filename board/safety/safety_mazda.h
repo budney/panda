@@ -80,9 +80,7 @@ static int mazda_rx_hook(CANPacket_t *to_push) {
   return valid;
 }
 
-static int mazda_tx_hook(CANPacket_t *to_send, bool longitudinal_allowed) {
-  UNUSED(longitudinal_allowed);
-
+static int mazda_tx_hook(CANPacket_t *to_send) {
   int tx = 1;
   int addr = GET_ADDR(to_send);
   int bus = GET_BUS(to_send);
@@ -173,8 +171,10 @@ static int mazda_fwd_hook(int bus, CANPacket_t *to_fwd) {
   return bus_fwd;
 }
 
-static const addr_checks* mazda_init(uint16_t param) {
+static const addr_checks* mazda_init(int16_t param) {
   UNUSED(param);
+  controls_allowed = false;
+  relay_malfunction_reset();
   return &mazda_rx_checks;
 }
 

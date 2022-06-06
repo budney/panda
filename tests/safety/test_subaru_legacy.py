@@ -47,17 +47,17 @@ class TestSubaruLegacySafety(common.PandaSafetyTest):
     values = {s: speed*0.0592 for s in ["FR", "FL", "RR", "RL"]}
     return self.packer.make_can_msg_panda("Wheel_Speeds", 0, values)
 
-  def _user_brake_msg(self, brake):
+  def _brake_msg(self, brake):
     if brake > 0 and brake < BRAKE_THRESHOLD:
       brake = BRAKE_THRESHOLD + 1
     values = {"Brake_Pedal": brake}
     return self.packer.make_can_msg_panda("Brake_Pedal", 0, values)
 
-  def _torque_msg(self, torque, steer_req=1):
+  def _torque_msg(self, torque):
     values = {"LKAS_Command": torque}
     return self.packer.make_can_msg_panda("ES_LKAS", 0, values)
 
-  def _user_gas_msg(self, gas):
+  def _gas_msg(self, gas):
     values = {"Throttle_Pedal": gas, "Counter": self.cnt_gas % 4}
     self.__class__.cnt_gas += 1
     return self.packer.make_can_msg_panda("Throttle", 0, values)

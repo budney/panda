@@ -39,7 +39,7 @@ class TestMazdaSafety(common.PandaSafetyTest):
 #    values = {"STEER_TORQUE_DRIVER": torque}
 #    return self.packer.make_can_msg_panda("STEER_TORQUE", 0, values)
 
-  def _torque_msg(self, torque, steer_req=1):
+  def _torque_msg(self, torque):
     values = {"LKAS_REQUEST": torque}
     return self.packer.make_can_msg_panda("CAM_LKAS", 0, values)
 
@@ -47,11 +47,11 @@ class TestMazdaSafety(common.PandaSafetyTest):
     values = {"SPEED": speed}
     return self.packer.make_can_msg_panda("ENGINE_DATA", 0, values)
 
-  def _user_brake_msg(self, brake):
+  def _brake_msg(self, brake):
     values = {"BRAKE_ON": brake}
     return self.packer.make_can_msg_panda("PEDALS", 0, values)
 
-  def _user_gas_msg(self, gas):
+  def _gas_msg(self, gas):
     values = {"PEDAL_GAS": gas}
     return self.packer.make_can_msg_panda("ENGINE_DATA", 0, values)
 
