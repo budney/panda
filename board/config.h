@@ -6,6 +6,9 @@
 //#define DEBUG_USB
 //#define DEBUG_SPI
 //#define DEBUG_FAULTS
+//#define DEBUG_COMMS
+
+#define DEEPSLEEP_WAKEUP_DELAY 3U
 
 #define NULL ((void*)0)
 #define COMPILE_TIME_ASSERT(pred) ((void)sizeof(char[1 - (2 * ((int)(!(pred))))]))

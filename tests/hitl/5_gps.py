@@ -1,17 +1,13 @@
 import time
 from panda import PandaSerial
-from .helpers import reset_pandas, test_all_gps_pandas, panda_connect_and_init
-
-# Reset the pandas before running tests
-def aaaa_reset_before_tests():
-  reset_pandas()
+from .helpers import test_all_gps_pandas, panda_connect_and_init
 
 @test_all_gps_pandas
 @panda_connect_and_init
 def test_gps_version(p):
   serial = PandaSerial(p, 1, 9600)
   # Reset and check twice to make sure the enabling works
-  for i in range(2):
+  for _ in range(2):
     # Reset GPS
     p.set_esp_power(0)
     time.sleep(2)

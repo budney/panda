@@ -25,6 +25,8 @@
 #define FAULT_INTERRUPT_RATE_KLINE_INIT     (1U << 19)
 #define FAULT_INTERRUPT_RATE_CLOCK_SOURCE   (1U << 20)
 #define FAULT_INTERRUPT_RATE_TICK           (1U << 21)
+#define FAULT_INTERRUPT_RATE_EXTI           (1U << 22)
+#define FAULT_INTERRUPT_RATE_SPI            (1U << 23)
 
 // Permanent faults
 #define PERMANENT_FAULTS 0U

@@ -10,7 +10,7 @@ def to_signed(d, bits):
 
 def is_steering_msg(mode, addr):
   ret = False
-  if mode in [Panda.SAFETY_HONDA_NIDEC, Panda.SAFETY_HONDA_BOSCH]:
+  if mode in (Panda.SAFETY_HONDA_NIDEC, Panda.SAFETY_HONDA_BOSCH):
     ret = (addr == 0xE4) or (addr == 0x194) or (addr == 0x33D) or (addr == 0x33DA) or (addr == 0x33DB)
   elif mode == Panda.SAFETY_TOYOTA:
     ret = addr == 0x2E4
@@ -22,54 +22,31 @@ def is_steering_msg(mode, addr):
     ret = addr == 0x292
   elif mode == Panda.SAFETY_SUBARU:
     ret = addr == 0x122
-  elif mode == Panda.SAFETY_SUBARU_GEN2:
-    ret = addr == 0x122
   elif mode == Panda.SAFETY_SUBARU_LEGACY:
     ret = addr == 0x164
   return ret
 
 def get_steer_torque(mode, to_send):
   ret = 0
-  if mode in [Panda.SAFETY_HONDA_NIDEC, Panda.SAFETY_HONDA_BOSCH]:
+  if mode in (Panda.SAFETY_HONDA_NIDEC, Panda.SAFETY_HONDA_BOSCH):
     ret = to_send.RDLR & 0xFFFF0000
   elif mode == Panda.SAFETY_TOYOTA:
     ret = (to_send.RDLR & 0xFF00) | ((to_send.RDLR >> 16) & 0xFF)
     ret = to_signed(ret, 16)
   elif mode == Panda.SAFETY_GM:
-    ret = ((to_send.RDLR & 0x7) << 8) + ((to_send.RDLR & 0xFF00) >> 8)
+    ret = ((to_send.data[0] & 0x7) << 8) | to_send.data[1]
     ret = to_signed(ret, 11)
   elif mode == Panda.SAFETY_HYUNDAI:
-    ret = ((to_send.RDLR >> 16) & 0x7ff) - 1024
+    ret = (((to_send.data[3] & 0x7) << 8) | to_send.data[2]) - 1024
   elif mode == Panda.SAFETY_CHRYSLER:
     ret = ((to_send.RDLR & 0x7) << 8) + ((to_send.RDLR & 0xFF00) >> 8) - 1024
   elif mode == Panda.SAFETY_SUBARU:
-    ret = ((to_send.RDLR >> 16) & 0x1FFF)
-    ret = to_signed(ret, 13)
-  elif mode == Panda.SAFETY_SUBARU_GEN2:
     ret = ((to_send.RDLR >> 16) & 0x1FFF)
     ret = to_signed(ret, 13)
   elif mode == Panda.SAFETY_SUBARU_LEGACY:
     ret = ((to_send.RDLR >> 8) & 0x1FFF)
     ret = to_signed(ret, 13)
   return ret
-
-def set_desired_torque_last(safety, mode, torque):
-  if mode in [Panda.SAFETY_HONDA_NIDEC, Panda.SAFETY_HONDA_BOSCH]:
-    pass  # honda safety mode doesn't enforce a rate on steering msgs
-  elif mode == Panda.SAFETY_TOYOTA:
-    safety.set_toyota_desired_torque_last(torque)
-  elif mode == Panda.SAFETY_GM:
-    safety.set_gm_desired_torque_last(torque)
-  elif mode == Panda.SAFETY_HYUNDAI:
-    safety.set_hyundai_desired_torque_last(torque)
-  elif mode == Panda.SAFETY_CHRYSLER:
-    safety.set_chrysler_desired_torque_last(torque)
-  elif mode == Panda.SAFETY_SUBARU:
-    safety.set_subaru_desired_torque_last(torque)
-  elif mode == Panda.SAFETY_SUBARU_GEN2:
-    safety.set_subaru_gen2_desired_torque_last(torque)
-  elif mode == Panda.SAFETY_SUBARU_LEGACY:
-    safety.set_subaru_legacy_desired_torque_last(torque)
 
 def package_can_msg(msg):
   ret = libpandasafety_py.ffi.new('CANPacket_t *')
@@ -94,5 +71,5 @@ def init_segment(safety, lr, mode):
   torque = get_steer_torque(mode, to_send)
   if torque != 0:
     safety.set_controls_allowed(1)
-    set_desired_torque_last(safety, mode, torque)
+    safety.set_desired_torque_last(torque)
     assert safety.safety_tx_hook(to_send), "failed to initialize panda safety for segment"

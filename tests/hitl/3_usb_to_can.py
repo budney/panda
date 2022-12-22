@@ -1,30 +1,20 @@
 import sys
 import time
-from panda import Panda
+from flaky import flaky
 from nose.tools import assert_equal, assert_less, assert_greater
-from .helpers import start_heartbeat_thread, reset_pandas, SPEED_NORMAL, SPEED_GMLAN, time_many_sends, test_white_and_grey, panda_type_to_serial, test_all_pandas, panda_connect_and_init
 
-# Reset the pandas before running tests
-def aaaa_reset_before_tests():
-  reset_pandas()
+from panda import Panda
+from .helpers import SPEED_NORMAL, SPEED_GMLAN, time_many_sends, test_white_and_grey, panda_type_to_serial, test_all_pandas, panda_connect_and_init
 
 @test_all_pandas
 @panda_connect_and_init
 def test_can_loopback(p):
-  # Start heartbeat
-  start_heartbeat_thread(p)
-
-  # enable output mode
   p.set_safety_mode(Panda.SAFETY_ALLOUTPUT)
-
-  # enable CAN loopback mode
   p.set_can_loopback(True)
 
-  busses = [0, 1, 2]
-
-  for bus in busses:
-    # set bus 0 speed to 250
-    p.set_can_speed_kbps(bus, 250)
+  for bus in (0, 1, 2):
+    # set bus 0 speed to 5000
+    p.set_can_speed_kbps(bus, 500)
 
     # send a message on bus 0
     p.can_send(0x1aa, b"message", bus)
@@ -44,13 +34,7 @@ def test_can_loopback(p):
 @test_all_pandas
 @panda_connect_and_init
 def test_safety_nooutput(p):
-  # Start heartbeat
-  start_heartbeat_thread(p)
-
-  # enable output mode
   p.set_safety_mode(Panda.SAFETY_SILENT)
-
-  # enable CAN loopback mode
   p.set_can_loopback(True)
 
   # send a message on bus 0
@@ -66,13 +50,8 @@ def test_safety_nooutput(p):
 @test_all_pandas
 @panda_connect_and_init
 def test_reliability(p):
-  LOOP_COUNT = 100
   MSG_COUNT = 100
 
-  # Start heartbeat
-  start_heartbeat_thread(p)
-
-  # enable output mode
   p.set_safety_mode(Panda.SAFETY_ALLOUTPUT)
   p.set_can_loopback(True)
   p.set_can_speed_kbps(0, 1000)
@@ -80,14 +59,13 @@ def test_reliability(p):
   addrs = list(range(100, 100 + MSG_COUNT))
   ts = [(j, 0, b"\xaa" * 8, 0) for j in addrs]
 
-  # 100 loops
-  for i in range(LOOP_COUNT):
-    st = time.time()
+  for _ in range(100):
+    st = time.monotonic()
 
     p.can_send_many(ts)
 
     r = []
-    while len(r) < 200 and (time.time() - st) < 0.5:
+    while len(r) < 200 and (time.monotonic() - st) < 0.5:
       r.extend(p.can_recv())
 
     sent_echo = [x for x in r if x[3] == 0x80]
@@ -98,25 +76,23 @@ def test_reliability(p):
     assert_equal(len(r), 200)
 
     # take sub 20ms
-    et = (time.time() - st) * 1000.0
+    et = (time.monotonic() - st) * 1000.0
     assert_less(et, 20)
 
     sys.stdout.write("P")
     sys.stdout.flush()
 
 @test_all_pandas
+@flaky(max_runs=3, min_passes=1)
 @panda_connect_and_init
 def test_throughput(p):
-  # Start heartbeat
-  start_heartbeat_thread(p)
-
   # enable output mode
   p.set_safety_mode(Panda.SAFETY_ALLOUTPUT)
 
   # enable CAN loopback mode
   p.set_can_loopback(True)
 
-  for speed in [100, 250, 500, 1000]:
+  for speed in [10, 20, 50, 100, 125, 250, 500, 1000]:
     # set bus 0 speed to speed
     p.set_can_speed_kbps(0, speed)
     time.sleep(0.05)
@@ -134,13 +110,7 @@ def test_throughput(p):
 @panda_type_to_serial
 @panda_connect_and_init
 def test_gmlan(p):
-  # Start heartbeat
-  start_heartbeat_thread(p)
-
-  # enable output mode
   p.set_safety_mode(Panda.SAFETY_ALLOUTPUT)
-
-  # enable CAN loopback mode
   p.set_can_loopback(True)
 
   p.set_can_speed_kbps(1, SPEED_NORMAL)
@@ -165,13 +135,7 @@ def test_gmlan(p):
 @panda_type_to_serial
 @panda_connect_and_init
 def test_gmlan_bad_toggle(p):
-  # Start heartbeat
-  start_heartbeat_thread(p)
-
-  # enable output mode
   p.set_safety_mode(Panda.SAFETY_ALLOUTPUT)
-
-  # enable CAN loopback mode
   p.set_can_loopback(True)
 
   # GMLAN_CAN2
@@ -194,5 +158,5 @@ def test_gmlan_bad_toggle(p):
 @panda_connect_and_init
 def test_serial_debug(p):
   _ = p.serial_read(Panda.SERIAL_DEBUG)  # junk
-  p.call_control_api(0xc0)
-  assert(p.serial_read(Panda.SERIAL_DEBUG).startswith(b"can "))
+  p.call_control_api(0x01)
+  assert(p.serial_read(Panda.SERIAL_DEBUG).startswith(b"NO HANDLER"))
