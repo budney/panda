@@ -5,6 +5,7 @@
 #include "drivers/usb.h"
 #include "drivers/gmlan_alt.h"
 #include "drivers/kline_init.h"
+#include "drivers/simple_watchdog.h"
 
 #include "early_init.h"
 #include "provision.h"
@@ -150,6 +151,8 @@ void tick_handler(void) {
 
     // tick drivers at 8Hz
     fan_tick();
+    usb_tick();
+    simple_watchdog_kick();
 
     // decimated to 1Hz
     if (loop_counter == 0U) {
@@ -194,7 +197,7 @@ void tick_handler(void) {
         siren_countdown -= 1U;
       }
 
-      if (controls_allowed) {
+      if (controls_allowed || heartbeat_engaged) {
         controls_allowed_countdown = 30U;
       } else if (controls_allowed_countdown > 0U) {
         controls_allowed_countdown -= 1U;
@@ -241,8 +244,9 @@ void tick_handler(void) {
           current_board->set_ir_power(0U);
 
           // TODO: need a SPI equivalent
-          // If enumerated but no heartbeat (phone up, boardd not running), turn the fan on to cool the device
-          if (usb_enumerated) {
+          // If enumerated but no heartbeat (phone up, boardd not running), or when the SOM GPIO is pulled high by the ABL,
+          // turn the fan on to cool the device
+          if(usb_enumerated || current_board->read_som_gpio()){
             fan_set_power(50U);
           } else {
             fan_set_power(0U);
@@ -352,7 +356,7 @@ int main(void) {
   }
 
   if (current_board->fan_max_rpm > 0U) {
-    llfan_init();
+    fan_init();
   }
 
   microsecond_timer_init();
@@ -362,6 +366,9 @@ int main(void) {
 
   // enable CAN TXs
   current_board->enable_can_transceivers(true);
+
+  // init watchdog for heartbeat loop, trigger after 4 8Hz cycles
+  simple_watchdog_init(FAULT_HEARTBEAT_LOOP_WATCHDOG, (4U * 1000000U / 8U));
 
   // 8Hz timer
   REGISTER_INTERRUPT(TICK_TIMER_IRQ, tick_handler, 10U, FAULT_INTERRUPT_RATE_TICK)
